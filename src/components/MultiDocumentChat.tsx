@@ -28,7 +28,7 @@ Unsupervised learning, on the other hand, works with unlabeled data to discover 
   },
   {
     id: '3',
-    title: 'Neural Networks and Deep Learning',
+    title: 'Product Weaknesses',
     content: `Neural networks are computational models inspired by the human brain's structure and function. They consist of interconnected nodes (neurons) organized in layers that process information and learn complex patterns from data.
 
 Deep learning is a specialized form of machine learning that uses neural networks with multiple hidden layers. These deep networks can automatically learn hierarchical representations of data, making them particularly effective for tasks like image recognition, natural language processing, and speech recognition.
