@@ -4,7 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { Send, Bot, User, FileText, Minimize2, Maximize2, MessageCircle } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
+import { Send, Bot, User, FileText, Minimize2, Maximize2, MessageCircle, BarChart3 } from 'lucide-react';
 
 export interface DocumentSection {
   id: string;
@@ -93,6 +96,48 @@ export const DocumentWindow = ({
     return `Regarding "${userInput}" in the context of "${section.title}": ${section.content.slice(0, 200)}... I'm specifically focused on this section's content and can provide detailed analysis of how your question relates to ${section.title.toLowerCase()}.`;
   };
 
+  // Sample chart data based on section type
+  const getChartData = () => {
+    const sectionTitle = section.title.toLowerCase();
+    
+    if (sectionTitle.includes('strengths')) {
+      return {
+        type: 'bar',
+        data: [
+          { name: 'Innovation', value: 85, color: '#22c55e' },
+          { name: 'Quality', value: 92, color: '#3b82f6' },
+          { name: 'Support', value: 78, color: '#8b5cf6' },
+          { name: 'Performance', value: 88, color: '#f59e0b' },
+          { name: 'Usability', value: 81, color: '#ef4444' }
+        ]
+      };
+    } else if (sectionTitle.includes('weaknesses')) {
+      return {
+        type: 'pie',
+        data: [
+          { name: 'Cost Issues', value: 35, color: '#ef4444' },
+          { name: 'Complexity', value: 25, color: '#f97316' },
+          { name: 'Learning Curve', value: 20, color: '#eab308' },
+          { name: 'Integration', value: 20, color: '#84cc16' }
+        ]
+      };
+    } else {
+      return {
+        type: 'line',
+        data: [
+          { month: 'Jan', value: 65 },
+          { month: 'Feb', value: 72 },
+          { month: 'Mar', value: 68 },
+          { month: 'Apr', value: 85 },
+          { month: 'May', value: 91 },
+          { month: 'Jun', value: 88 }
+        ]
+      };
+    }
+  };
+
+  const chartData = getChartData();
+
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -158,20 +203,109 @@ export const DocumentWindow = ({
 
       {!isMinimized && (
         <div className="flex h-[calc(400px-73px)]">
-          {/* Document Content */}
+          {/* Document Content and Charts */}
           <div className="flex-1 bg-ai-document-bg">
-            <div className="p-3 border-b border-border">
-              <h4 className="text-xs font-medium text-muted-foreground">Section Content</h4>
-            </div>
-            <ScrollArea className="h-[calc(100%-41px)] p-3">
-              <div className="prose prose-sm max-w-none text-foreground">
-                {section.content.split('\n').map((paragraph, index) => (
-                  <p key={index} className="mb-2 text-xs leading-relaxed">
-                    {paragraph}
-                  </p>
-                ))}
+            <Tabs defaultValue="content" className="h-full">
+              <div className="p-3 border-b border-border">
+                <TabsList className="grid w-full grid-cols-2 h-8">
+                  <TabsTrigger value="content" className="text-xs">Content</TabsTrigger>
+                  <TabsTrigger value="charts" className="text-xs">
+                    <BarChart3 className="h-3 w-3 mr-1" />
+                    Charts
+                  </TabsTrigger>
+                </TabsList>
               </div>
-            </ScrollArea>
+
+              <TabsContent value="content" className="h-[calc(100%-57px)] m-0">
+                <ScrollArea className="h-full p-3">
+                  <div className="prose prose-sm max-w-none text-foreground">
+                    {section.content.split('\n').map((paragraph, index) => (
+                      <p key={index} className="mb-2 text-xs leading-relaxed">
+                        {paragraph}
+                      </p>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </TabsContent>
+
+              <TabsContent value="charts" className="h-[calc(100%-57px)] m-0">
+                <div className="p-3 h-full">
+                  <div className="h-full flex flex-col">
+                    <h4 className="text-xs font-medium text-muted-foreground mb-3">
+                      Visual Analysis - {section.title}
+                    </h4>
+                    
+                    <div className="flex-1 min-h-0">
+                      <div className="h-full w-full">
+                        {chartData.type === 'bar' && (
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={chartData.data}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted))" />
+                              <XAxis 
+                                dataKey="name" 
+                                tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                                interval={0}
+                                angle={-45}
+                                textAnchor="end"
+                                height={60}
+                              />
+                              <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
+                              <Bar dataKey="value" radius={[2, 2, 0, 0]}>
+                                {chartData.data.map((entry, index) => (
+                                  <Cell key={`cell-${index}`} fill={entry.color} />
+                                ))}
+                              </Bar>
+                            </BarChart>
+                          </ResponsiveContainer>
+                        )}
+                        
+                        {chartData.type === 'pie' && (
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Pie
+                                data={chartData.data}
+                                cx="50%"
+                                cy="50%"
+                                innerRadius={30}
+                                outerRadius={80}
+                                paddingAngle={2}
+                                dataKey="value"
+                                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                                labelLine={false}
+                              >
+                                {chartData.data.map((entry, index) => (
+                                  <Cell key={`cell-${index}`} fill={entry.color} />
+                                ))}
+                              </Pie>
+                            </PieChart>
+                          </ResponsiveContainer>
+                        )}
+                        
+                        {chartData.type === 'line' && (
+                          <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={chartData.data}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted))" />
+                              <XAxis 
+                                dataKey="month" 
+                                tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} 
+                              />
+                              <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
+                              <Line 
+                                type="monotone" 
+                                dataKey="value" 
+                                stroke="hsl(var(--primary))" 
+                                strokeWidth={2}
+                                dot={{ fill: "hsl(var(--primary))", strokeWidth: 2, r: 3 }}
+                              />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
           </div>
 
           <Separator orientation="vertical" />
