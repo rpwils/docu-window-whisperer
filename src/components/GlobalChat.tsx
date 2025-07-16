@@ -44,33 +44,223 @@ export const GlobalChat = ({ sections, activeSection, onSectionReference }: Glob
 
   const generateAIResponse = (userInput: string): string => {
     const lowerInput = userInput.toLowerCase();
+    const words = lowerInput.split(' ');
     
     // Check if user is asking about a specific section
     const mentionedSection = sections.find(section => 
       lowerInput.includes(section.title.toLowerCase()) ||
-      lowerInput.includes(section.id)
+      section.title.toLowerCase().split(' ').some(word => lowerInput.includes(word))
     );
 
+    // Analysis functions
+    const analyzeSection = (section: DocumentSection) => {
+      const content = section.content;
+      const sentences = content.split('.').filter(s => s.trim().length > 0);
+      const wordCount = content.split(' ').length;
+      const keyTerms = extractKeyTerms(content);
+      
+      return {
+        wordCount,
+        sentenceCount: sentences.length,
+        keyTerms,
+        summary: content.slice(0, 200) + '...',
+        mainThemes: identifyThemes(content)
+      };
+    };
+
+    const extractKeyTerms = (text: string): string[] => {
+      const commonWords = ['the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'is', 'are', 'was', 'were', 'be', 'been', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might', 'can', 'this', 'that', 'these', 'those', 'a', 'an'];
+      const words = text.toLowerCase().match(/\b[a-z]{4,}\b/g) || [];
+      const wordFreq: { [key: string]: number } = {};
+      
+      words.forEach(word => {
+        if (!commonWords.includes(word)) {
+          wordFreq[word] = (wordFreq[word] || 0) + 1;
+        }
+      });
+      
+      return Object.entries(wordFreq)
+        .sort(([,a], [,b]) => (b as number) - (a as number))
+        .slice(0, 5)
+        .map(([word]) => word);
+    };
+
+    const identifyThemes = (text: string) => {
+      const aiTerms = ['artificial intelligence', 'ai', 'machine learning', 'neural', 'algorithm', 'data', 'model', 'training'];
+      const mlTerms = ['supervised', 'unsupervised', 'classification', 'regression', 'clustering', 'feature'];
+      const deepLearningTerms = ['deep learning', 'neural network', 'cnn', 'rnn', 'transformer', 'layer'];
+      
+      const themes = [];
+      if (aiTerms.some(term => text.toLowerCase().includes(term))) themes.push('Artificial Intelligence');
+      if (mlTerms.some(term => text.toLowerCase().includes(term))) themes.push('Machine Learning');
+      if (deepLearningTerms.some(term => text.toLowerCase().includes(term))) themes.push('Deep Learning');
+      
+      return themes;
+    };
+
+    const compareMultipleSections = (sectionsToCompare: DocumentSection[]) => {
+      const analyses = sectionsToCompare.map(analyzeSection);
+      const totalWords = analyses.reduce((sum, analysis) => sum + analysis.wordCount, 0);
+      const allThemes = [...new Set(analyses.flatMap(a => a.mainThemes))];
+      const commonTerms = analyses.reduce((common, analysis) => 
+        common.filter(term => analysis.keyTerms.includes(term)), 
+        analyses[0]?.keyTerms || []
+      );
+
+      return {
+        sectionsCount: sectionsToCompare.length,
+        totalWords,
+        averageWords: Math.round(totalWords / sectionsToCompare.length),
+        commonThemes: allThemes,
+        commonTerms,
+        analyses
+      };
+    };
+
+    // Enhanced response generation based on input patterns
+    
+    // Specific section analysis
     if (mentionedSection) {
-      return `I can see you're asking about "${mentionedSection.title}". Based on that section, ${mentionedSection.content.slice(0, 200)}... Would you like me to elaborate on any specific aspect of this section?`;
+      const analysis = analyzeSection(mentionedSection);
+      
+      if (lowerInput.includes('analyze') || lowerInput.includes('analysis')) {
+        return `## Analysis of "${mentionedSection.title}"
+
+**Content Overview:**
+- Word count: ${analysis.wordCount} words
+- ${analysis.sentenceCount} sentences
+- Main themes: ${analysis.mainThemes.join(', ') || 'General content'}
+
+**Key Terms:** ${analysis.keyTerms.join(', ')}
+
+**Summary:** ${analysis.summary}
+
+**Key Insights:** This section focuses on ${analysis.mainThemes.length > 0 ? analysis.mainThemes[0].toLowerCase() : 'the topic'} and provides ${analysis.sentenceCount > 10 ? 'comprehensive' : 'foundational'} coverage of the subject matter.`;
+      }
+      
+      if (lowerInput.includes('summary') || lowerInput.includes('summarize')) {
+        return `## Summary of "${mentionedSection.title}"
+
+${analysis.summary}
+
+**Main Focus:** ${analysis.mainThemes.join(' and ') || 'Core concepts'}
+**Key Terms:** ${analysis.keyTerms.slice(0, 3).join(', ')}
+**Scope:** ${analysis.wordCount > 200 ? 'Detailed' : 'Concise'} overview with ${analysis.sentenceCount} key points covered.`;
+      }
+
+      return `I can see you're asking about "${mentionedSection.title}". This section covers ${analysis.mainThemes.join(' and ').toLowerCase() || 'important concepts'} with key focus on: ${analysis.keyTerms.slice(0, 3).join(', ')}. 
+
+${analysis.summary}
+
+Would you like me to provide a deeper analysis, compare it with other sections, or focus on specific aspects?`;
     }
 
-    // Check for comparison requests
-    if (lowerInput.includes('compare') || lowerInput.includes('difference')) {
-      return `I can help you compare different sections. Currently, I have access to ${sections.map(s => s.title).join(', ')}. Which sections would you like me to compare specifically?`;
+    // Multi-section comparison
+    if (lowerInput.includes('compare') || lowerInput.includes('comparison') || lowerInput.includes('difference')) {
+      const comparison = compareMultipleSections(sections);
+      
+      return `## Multi-Section Comparison Analysis
+
+**Document Overview:**
+- ${comparison.sectionsCount} sections analyzed
+- Total content: ${comparison.totalWords} words
+- Average section length: ${comparison.averageWords} words
+
+**Common Themes Across Sections:**
+${comparison.commonThemes.map(theme => `• ${theme}`).join('\n')}
+
+**Shared Key Terms:** ${comparison.commonTerms.join(', ') || 'Each section has unique terminology'}
+
+**Section Breakdown:**
+${comparison.analyses.map((analysis, i) => 
+  `**${sections[i].title}:** ${analysis.wordCount} words, focuses on ${analysis.mainThemes.join(' & ') || 'core concepts'}`
+).join('\n')}
+
+**Analysis:** ${comparison.commonThemes.length > 1 ? 'The sections show strong thematic connections' : 'Each section covers distinct aspects'}, with ${comparison.commonTerms.length > 0 ? 'overlapping terminology indicating related concepts' : 'specialized vocabulary for each topic'}.`;
     }
 
-    // Check for summary requests
-    if (lowerInput.includes('summary') || lowerInput.includes('summarize')) {
-      return `I can provide summaries of any or all sections. Here's a brief overview of available sections: ${sections.map(s => `"${s.title}"`).join(', ')}. Which section(s) would you like me to summarize?`;
+    // Document-wide summary
+    if (lowerInput.includes('summary') || lowerInput.includes('summarize') || lowerInput.includes('overview')) {
+      const fullAnalysis = compareMultipleSections(sections);
+      
+      return `## Complete Document Summary
+
+**Document Structure:** ${sections.length} main sections covering ${fullAnalysis.totalWords} words total
+
+**Section Overview:**
+${sections.map((section, i) => {
+  const analysis = analyzeSection(section);
+  return `**${section.title}:** ${analysis.keyTerms.slice(0, 2).join(', ')} (${analysis.wordCount} words)`;
+}).join('\n')}
+
+**Main Themes:** ${fullAnalysis.commonThemes.join(', ')}
+
+**Document Narrative:** This document provides a ${fullAnalysis.totalWords > 1000 ? 'comprehensive' : 'foundational'} exploration of ${fullAnalysis.commonThemes[0]?.toLowerCase() || 'the subject matter'}, progressing from ${sections[0]?.title.toLowerCase()} through to ${sections[sections.length - 1]?.title.toLowerCase()}.
+
+**Key Insights:** ${fullAnalysis.commonTerms.length > 0 ? `Common concepts include ${fullAnalysis.commonTerms.slice(0, 3).join(', ')}, indicating strong thematic coherence.` : 'Each section contributes unique perspectives to the overall narrative.'}`;
     }
 
-    // General response referencing active section if available
-    if (activeSection) {
-      return `I understand your question about "${userInput}". ${activeSection ? `Since you were discussing "${activeSection.title}", ` : ''}I can help you analyze this across all document sections. Based on the available content, I can provide insights and connections between different sections.`;
+    // Question answering across sections
+    if (lowerInput.includes('what') || lowerInput.includes('how') || lowerInput.includes('why') || lowerInput.includes('?')) {
+      const relevantSections = sections.filter(section => 
+        words.some(word => section.content.toLowerCase().includes(word) || section.title.toLowerCase().includes(word))
+      );
+
+      if (relevantSections.length > 0) {
+        const insights = relevantSections.map(section => {
+          const analysis = analyzeSection(section);
+          return `**From "${section.title}":** ${analysis.summary}`;
+        }).join('\n\n');
+
+        return `## Answer Based on Document Analysis
+
+**Relevant Sections Found:** ${relevantSections.length} of ${sections.length} sections contain related information.
+
+${insights}
+
+**Cross-Section Insight:** ${relevantSections.length > 1 ? 'Multiple sections provide complementary perspectives on your question.' : 'This topic is primarily covered in one section.'} ${activeSection ? `Since you're currently focused on "${activeSection.title}", I can provide more specific details from that context.` : ''}`;
+      }
     }
 
-    return `That's an interesting question about "${userInput}". I have access to all ${sections.length} document sections and can help you find relevant information, make connections between sections, or provide detailed analysis. Would you like me to search across specific sections?`;
+    // Key insights and patterns
+    if (lowerInput.includes('insight') || lowerInput.includes('pattern') || lowerInput.includes('key') || lowerInput.includes('important')) {
+      const fullAnalysis = compareMultipleSections(sections);
+      
+      return `## Key Insights & Patterns
+
+**Document Patterns:**
+• **Progression:** ${sections[0]?.title} → ${sections[sections.length - 1]?.title}
+• **Complexity:** ${fullAnalysis.averageWords > 150 ? 'Detailed explanations' : 'Concise coverage'}
+• **Thematic Unity:** ${fullAnalysis.commonThemes.length} shared themes
+
+**Critical Insights:**
+${fullAnalysis.commonThemes.map(theme => `• **${theme}:** Appears across ${sections.filter(s => analyzeSection(s).mainThemes.includes(theme)).length} sections`).join('\n')}
+
+**Content Distribution:**
+${sections.map(section => {
+  const analysis = analyzeSection(section);
+  return `• **${section.title}:** ${analysis.wordCount} words, ${Math.round((analysis.wordCount / fullAnalysis.totalWords) * 100)}% of total content`;
+}).join('\n')}
+
+**Recommendation:** ${activeSection ? `Focus on "${activeSection.title}" provides ${analyzeSection(activeSection).mainThemes.join(' and ').toLowerCase()} foundation.` : 'Start with the introduction for foundational understanding.'}`;
+    }
+
+    // Context-aware general response
+    const contextResponse = activeSection ? 
+      `Since you're currently discussing "${activeSection.title}", I can provide specific insights about ${analyzeSection(activeSection).mainThemes.join(' and ').toLowerCase() || 'this content'}.` : 
+      'I have access to all document sections and can provide comprehensive analysis.';
+
+    return `I understand your question about "${userInput}". ${contextResponse}
+
+**Available Analysis Options:**
+• **Section Analysis:** Deep dive into any specific section
+• **Comparative Analysis:** Compare themes and concepts across sections  
+• **Document Summary:** Overall insights and key patterns
+• **Q&A:** Answer specific questions using content from relevant sections
+
+**Current Document:** ${sections.length} sections covering ${compareMultipleSections(sections).commonThemes.join(', ').toLowerCase() || 'various topics'}
+
+What specific aspect would you like me to explore further?`;
   };
 
   const handleSendMessage = () => {
