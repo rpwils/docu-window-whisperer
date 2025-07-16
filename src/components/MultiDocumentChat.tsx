@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { DocumentWindow, DocumentSection } from './DocumentWindow';
+import { GlobalChat } from './GlobalChat';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Plus, FileText, Sparkles } from 'lucide-react';
+import { Plus, FileText, Sparkles, MessageSquare } from 'lucide-react';
 
 const defaultSections: DocumentSection[] = [
   {
@@ -41,6 +42,7 @@ Convolutional Neural Networks (CNNs) have been particularly successful in comput
 export const MultiDocumentChat = () => {
   const [sections, setSections] = useState<DocumentSection[]>(defaultSections);
   const [nextId, setNextId] = useState(4);
+  const [activeSection, setActiveSection] = useState<DocumentSection | null>(null);
 
   const addNewSection = () => {
     const newSection: DocumentSection = {
@@ -48,7 +50,7 @@ export const MultiDocumentChat = () => {
       title: `Section ${nextId}`,
       content: `This is a new section that has been dynamically added to the document. You can customize this content and interact with the AI assistant about this specific section.
 
-This demonstrates the dynamic nature of the interface, where new document sections can be added on demand. Each section maintains its own chat context and conversation history with the AI assistant.
+This demonstrates the dynamic nature of the interface, where new document sections can be added on demand. The global AI assistant can help you analyze, summarize, or answer questions about any content in this section.
 
 The AI can help you analyze, summarize, or answer questions about any content in this section. Try asking specific questions about the text or requesting explanations of complex concepts.`
     };
@@ -59,20 +61,27 @@ The AI can help you analyze, summarize, or answer questions about any content in
 
   const removeSection = (id: string) => {
     setSections(prev => prev.filter(section => section.id !== id));
+    if (activeSection?.id === id) {
+      setActiveSection(null);
+    }
+  };
+
+  const handleDiscussSection = (section: DocumentSection) => {
+    setActiveSection(section);
   };
 
   return (
-    <div className="min-h-screen bg-background p-6">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between">
+      <div className="border-b border-border bg-ai-surface/50 p-6">
+        <div className="flex items-center justify-between max-w-7xl mx-auto">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-ai-glow/20 rounded-lg">
               <Sparkles className="h-6 w-6 text-ai-glow" />
             </div>
             <div>
               <h1 className="text-3xl font-bold text-foreground">Multi-Document AI Chat</h1>
-              <p className="text-muted-foreground">Interact with AI assistants for each document section</p>
+              <p className="text-muted-foreground">One AI assistant for all your document sections</p>
             </div>
           </div>
           <Button 
@@ -85,29 +94,35 @@ The AI can help you analyze, summarize, or answer questions about any content in
         </div>
       </div>
 
-      {/* Stats */}
-      <Card className="p-4 mb-6 bg-ai-surface border-border">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-2">
-              <FileText className="h-5 w-5 text-ai-glow" />
-              <span className="text-sm text-muted-foreground">
-                {sections.length} Document {sections.length === 1 ? 'Section' : 'Sections'}
-              </span>
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto p-6">
+        {/* Stats */}
+        <Card className="p-4 mb-6 bg-ai-surface border-border">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-ai-glow" />
+                <span className="text-sm text-muted-foreground">
+                  {sections.length} Document {sections.length === 1 ? 'Section' : 'Sections'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <MessageSquare className="h-5 w-5 text-ai-glow" />
+                <span className="text-sm text-muted-foreground">Global AI Assistant Active</span>
+              </div>
+              {activeSection && (
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-ai-glow rounded-full animate-pulse"></div>
+                  <span className="text-sm text-ai-glow">Discussing: {activeSection.title}</span>
+                </div>
+              )}
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-ai-glow rounded-full animate-pulse"></div>
-              <span className="text-sm text-muted-foreground">AI Assistants Active</span>
+            <div className="text-xs text-muted-foreground">
+              AI can analyze and compare all sections
             </div>
           </div>
-          <div className="text-xs text-muted-foreground">
-            Each section has its own AI context
-          </div>
-        </div>
-      </Card>
+        </Card>
 
-      {/* Document Windows Grid */}
-      <div className="grid gap-6">
         {sections.length === 0 ? (
           <Card className="p-12 text-center bg-ai-surface border-border border-dashed">
             <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
@@ -119,25 +134,44 @@ The AI can help you analyze, summarize, or answer questions about any content in
             </Button>
           </Card>
         ) : (
-          sections.map((section, index) => (
-            <DocumentWindow
-              key={section.id}
-              section={section}
-              onClose={sections.length > 1 ? () => removeSection(section.id) : undefined}
-              className={`transition-all duration-500 ease-out`}
-              style={{
-                animationDelay: `${index * 100}ms`
-              }}
-            />
-          ))
-        )}
-      </div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-300px)]">
+            {/* Document Sections */}
+            <div className="lg:col-span-2 space-y-4 overflow-y-auto pr-2">
+              {sections.map((section, index) => (
+                <DocumentWindow
+                  key={section.id}
+                  section={section}
+                  onClose={sections.length > 1 ? () => removeSection(section.id) : undefined}
+                  onDiscuss={handleDiscussSection}
+                  isActive={activeSection?.id === section.id}
+                  className={`transition-all duration-500 ease-out animate-fade-in`}
+                  style={{
+                    animationDelay: `${index * 100}ms`
+                  }}
+                />
+              ))}
+            </div>
 
-      {/* Footer */}
-      <div className="mt-8 text-center">
-        <p className="text-xs text-muted-foreground">
-          Powered by AI • Each section maintains independent conversation context
-        </p>
+            {/* Global Chat */}
+            <div className="lg:col-span-1">
+              <GlobalChat
+                sections={sections}
+                activeSection={activeSection}
+                onSectionReference={(sectionId) => {
+                  const section = sections.find(s => s.id === sectionId);
+                  if (section) setActiveSection(section);
+                }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Footer */}
+        <div className="mt-8 text-center">
+          <p className="text-xs text-muted-foreground">
+            Powered by AI • Global assistant can discuss and compare all document sections
+          </p>
+        </div>
       </div>
     </div>
   );
