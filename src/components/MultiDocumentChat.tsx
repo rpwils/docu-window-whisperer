@@ -17,7 +17,7 @@ The field has evolved rapidly from simple rule-based systems to sophisticated ne
   },
   {
     id: '2',
-    title: 'Machine Learning Fundamentals',
+    title: 'Product Strengths',
     content: `Machine Learning is a subset of artificial intelligence that focuses on creating systems that can learn and improve from experience without being explicitly programmed. This approach has revolutionized how we solve complex problems and extract insights from data.
 
 There are three main types of machine learning: supervised learning, unsupervised learning, and reinforcement learning. Each type serves different purposes and is suitable for different kinds of problems.
