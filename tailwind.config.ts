@@ -52,6 +52,14 @@ export default {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))'
 				},
+				ai: {
+					glow: 'hsl(var(--ai-glow))',
+					'glow-soft': 'hsl(var(--ai-glow-soft))',
+					surface: 'hsl(var(--ai-surface))',
+					'surface-hover': 'hsl(var(--ai-surface-hover))',
+					'document-bg': 'hsl(var(--document-bg))',
+					'chat-bg': 'hsl(var(--chat-bg))'
+				},
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',
 					foreground: 'hsl(var(--sidebar-foreground))',
